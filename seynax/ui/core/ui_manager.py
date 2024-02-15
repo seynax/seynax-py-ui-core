@@ -1,6 +1,7 @@
+import copy
 from tkinter    import Tk
 from tkinter.font   import Font
-from typing         import Type
+from typing import Type, List
 
 from utils.attributes.dict_utils        import merge
 from utils.attributes.attribute_utils   import non_none, attempt_call, attempt_call_method
@@ -88,19 +89,32 @@ class UIManager:
                 child = attempt_call(_callable=child, forced_parameters=merge(constructor_arguments, {
                     'master': parent
                 }), force_unpack=True)
-                attempt_call_method(method_source=child,
-                                    method_name='config',
-                                    forced_parameters={
-                                        'background': self.theme.background,
-                                        'foreground': self.theme.foreground,
-                                        'font': self.theme.font
-                                    },
-                                    unpack=False)
-
+                settings = { 'background': self.theme.background,
+                             'foreground': self.theme.foreground,
+                             'font': self.theme.font }
+                for name, value in settings.items():
+                    attempt_call_method(method_source=child,
+                                        method_name='config',
+                                        forced_parameters={
+                                            name: value
+                                        },
+                                        unpack=False)
                 attempt_call_method(child, 'pack')
-        except Exception:
-            pass
-
+        except Exception as e:
+            print(str(e))
         self.child_list.append(child)
 
         return child
+
+    def save_state(self):
+        saved_child_list = []
+        for child in self.child_list:
+            if isinstance(child, UIManager):
+                saved_child_list.append(child.save_state())
+            else:
+                saved_child_list.append(copy.copy(child))
+        return saved_child_list
+
+    def restore_state(self, saved_state: List):
+        self._execute('destroy')
+        self.child_list = saved_state

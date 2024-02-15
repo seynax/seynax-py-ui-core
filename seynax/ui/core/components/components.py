@@ -1,4 +1,6 @@
-from tkinter import Label, Tk, Text, Menu, Frame, Button
+from tkinter import Label, Tk, Text, Menu, Frame, Button, LEFT, BOTH, Grid, Canvas, RIGHT, N, Y
+
+from utils.attributes import dict_utils
 
 from seynax.ui.core.keyboard import keyboard
 from seynax.ui.core.ui_manager import UIManager, Theme
@@ -62,8 +64,59 @@ class ComponentNativeMenu(UIManager):
 class ComponentMenu(UIManager):
     def __init__(self, window: Tk, theme: Theme, parent = None, **args):
         super().__init__(window, theme, parent)
-        frame = self.add(Frame)
-        self.root = frame
+        self.root = self.add(Frame, width=1920, height=self.theme.font_size + 10, **args)
 
     def cascade(self, **args):
-        button = self.add(Button)
+        menu_entry = self.add(ComponentMenuEntry, closeable=False, **args)
+        self.root.pack()
+
+        return menu_entry
+
+
+class ComponentMenuEntry(UIManager):
+    def __init__(self, window: Tk, theme: Theme, parent = None, closeable: bool = True, **args):
+        super().__init__(window, theme, parent)
+        self.closeable = closeable
+
+        self.args = args
+        self.root = Frame(self.window, width=1920, height=self.theme.font_size + 10)
+        if 'text' in args:
+            self.cascade(text=args['text'])
+        if not self.closeable:
+            self.open()
+        else:
+            self.close()
+
+    def cascade(self, **args):
+        menu_entry = self.add(ComponentMenuEntry)
+        button = self.add(Button, command=lambda: menu_entry.open(), **args)
+        button.pack(side=LEFT)
+        self.close()
+        return menu_entry
+
+    def open(self):
+        self.root.place(x=0, y=self.theme.font_size + 10, width=1920, height=self.theme.font_size + 10)
+        self.root.pack()
+
+        self.window.bind("<Key>",       self.key)
+        self.window.bind("<Button-1>",  self.mouse)
+
+    def close(self):
+        if not self.closeable:
+            return
+
+        self.window.unbind("<Key>")
+        self.window.unbind("<Button-1>")
+
+        self.root.pack_forget()
+
+    def key(self, event):
+        print("pressed", repr(event.char))
+
+    def mouse(self, event):
+        x = self.window.winfo_pointerx() - self.window.winfo_rootx()
+        y = self.window.winfo_pointery() - self.window.winfo_rooty()
+        if  self.root.winfo_x() <= x <= self.root.winfo_x() + self.root.winfo_width() and self.root.winfo_y() <= y <= self.root.winfo_y() + self.root.winfo_height():
+            pass
+        else:
+            self.close()

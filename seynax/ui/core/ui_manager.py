@@ -1,5 +1,4 @@
 import copy
-from tkinter    import Tk
 from tkinter.font   import Font
 from typing import Type, List
 
@@ -35,11 +34,12 @@ class Theme:
 
 
 class UIManager:
-    def __init__(self, window: Tk, theme: Theme, parent = None):
+    def __init__(self, window, theme: Theme, parent = None):
         self.window = window
+        self.window_handle = window.handle
         self.theme = theme
 
-        self.parent = non_none(parent, window)
+        self.parent = non_none(parent, self.window_handle)
         self.child_list = []
 
     def config(self, **args):
@@ -74,20 +74,16 @@ class UIManager:
         if child is None:
             return child
 
-        parent = self.parent
-        if hasattr(self, 'root'):
-            parent = self.root
-
         try:
             if isinstance(child, Type) and issubclass(child, UIManager):
                 child = attempt_call(_callable=child, forced_parameters=merge(constructor_arguments, {
                     'window': self.window,
                     'theme': self.theme,
-                    'parent': parent
+                    'parent': self
                 }), force_unpack=True)
             else:
                 child = attempt_call(_callable=child, forced_parameters=merge(constructor_arguments, {
-                    'master': parent
+                    'master': self.window_handle if not hasattr(self, 'root') else self.root
                 }), force_unpack=True)
                 settings = { 'background': self.theme.background,
                              'foreground': self.theme.foreground,

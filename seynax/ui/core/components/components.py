@@ -1,15 +1,95 @@
-from tkinter import Label, Tk, Text, Menu, Frame, Button, LEFT, BOTH, Grid, Canvas, RIGHT, N, Y, TOP, NW, W, S
-from tkinter.constants import E
+from tkinter                            import Label, Text, Menu, Frame, Button
 
-from utils.attributes import dict_utils
+from tkinter.constants                  import X, Y,  BOTH
+from tkinter.constants                  import TOP, BOTTOM, LEFT, RIGHT
+from tkinter.constants                  import NW, SW, NE, SE
+from tkinter.constants                  import N, S, W, E
+from typing import Any, Type, Union, Literal, Dict
 
-from seynax.ui.core.keyboard import keyboard
-from seynax.ui.core.ui_manager import UIManager, Theme
-from seynax.ui.core.ui_window import UIWindow
+from utils.attributes.attribute_utils   import non_none, attempt_call_method, attempt_call
+from utils.attributes.dict_utils        import merge
+
+from seynax.ui.core.keyboard            import keyboard
+from seynax.ui.core.ui_manager          import Theme
+
+class EmptyComponent:
+    pass
 
 
-class ComponentLabel(UIManager):
-    def __init__(self, window: UIWindow, theme: Theme, parent = None, **args):
+'''
+    Component: Tkinter component manager with utilities methods
+    Component.handle: Tkinter component
+    w<name>(): return value         from handle.winfo_<name>()
+    t<name>(): execute and return   from handle.<name>()
+'''
+class Component(EmptyComponent):
+    def __init__(self,
+                 window,
+                 theme: Theme,
+                 handle: Union[Any, Type],
+                 parent: EmptyComponent = None,
+                 config_args: Dict = None,
+                 placement_type: Literal['pack', 'place', 'grid'] = 'pack',
+                 placement_args: Dict = None,
+                 **kwargs):
+        self.window         = window
+        self.theme          = theme
+        self.parent         = parent
+
+        self.parent         = non_none(parent, self.window)
+
+        self.constructor_args   = kwargs
+        self.config_args        = non_none(config_args, {})
+        self.placement_type     = placement_type
+        self.placement_args     = non_none(placement_args, {})
+
+        # Handle
+        self.handle = self._initialize_handle(handle)
+
+    def _initialize_handle(self, handle):
+        if handle is None:
+            print('!')
+            return handle
+
+        handle = attempt_call(_callable=handle, forced_parameters=merge(self.constructor_args, {
+            'master': None if not hasattr(self.window, 'handle') else self.window.handle
+        }), force_unpack=True)
+
+        settings = {'background': self.theme.background,
+                    'foreground': self.theme.foreground,
+                    'font': self.theme.font}
+
+        for name, value in settings.items():
+            attempt_call_method(method_source=handle,
+                                method_name='config',
+                                forced_parameters={
+                                    name: value
+                                },
+                                unpack=False)
+        attempt_call_method(handle, self.placement_type, **self.placement_args)
+
+        for method_name in dir(handle):
+            if method_name.startswith('winfo'):
+                setattr(self,
+                        f'w{method_name.replace("winfo_", "")}',
+                        getattr(handle, method_name))
+                continue
+
+            if method_name.startswith('_'):
+                continue
+
+            setattr(self,
+                    f't{method_name}',
+                    getattr(handle, method_name))
+            print(method_name)
+
+        return handle
+
+
+
+
+class ComponentLabel(Component):
+    def __init__(self, window, theme: Theme, parent = None, **args):
         super().__init__(window, theme, parent)
         self.label = self.add(Label, **args)
 
@@ -17,8 +97,8 @@ class ComponentLabel(UIManager):
         self.label.config(text=text)
 
 
-class ComponentTextBox(UIManager):
-    def __init__(self, window: UIWindow, theme: Theme, text: str = '', parent = None, **args):
+class ComponentTextBox(Component):
+    def __init__(self, window, theme: Theme, text: str = '', parent = None, **args):
         super().__init__(window, theme, parent)
         self.text = text
         self.box = self.add(Text, **args)
@@ -32,8 +112,8 @@ class ComponentTextBox(UIManager):
         self.box.insert('end', text)
 
 
-class ComponentNativeMenu(UIManager):
-    def __init__(self, window: UIWindow, theme: Theme, parent = None, **args):
+class ComponentNativeMenu(Component):
+    def __init__(self, window, theme: Theme, parent = None, **args):
         super().__init__(window, theme, parent)
         self.menu = self.add(Menu, **args)
         self.menu.config(background='yellow')
@@ -63,8 +143,8 @@ class ComponentNativeMenu(UIManager):
         self.menu.add_command(**args)
 
 
-class ComponentMenuEntry(UIManager):
-    def __init__(self, window: UIWindow, theme: Theme, parent = None, closeable: bool = True, **args):
+class ComponentMenuEntry(Component):
+    def __init__(self, window, theme: Theme, parent = None, closeable: bool = True, **args):
         super().__init__(window, theme, parent)
         self.closeable = closeable
 

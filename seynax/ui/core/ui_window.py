@@ -1,12 +1,13 @@
 from tkinter import Tk
 
-from seynax.ui.core.ui_manager import UIManager, Theme
+from seynax.ui.core.container.ui_container import UIContainer
+from seynax.ui.core.ui_manager import Theme
 
 
-class UIWindow(UIManager):
+class UIWindow(UIContainer):
     def __init__(self, width: int = 1920, height: int = 1080, name: str = '', font_size: int = 22, background: str = 'gray16', foreground: str = 'gray64'):
         self.handle = Tk()
-        super().__init__(self, Theme(self, font_size, background, foreground))
+        super().__init__(self, theme=Theme(self, font_size, background, foreground))
         self.handle.wm_title(name)
         self.handle.geometry(f'{width}x{height}')
         self.update_color()

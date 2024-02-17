@@ -1,1 +1,1 @@
-git+https://github.com/seynax/seynax-py-core.git@c4f48a2febe09e819daa6316c77e84cf5d3e84fa
+git+https://github.com/seynax/seynax-py-core.git@af1acd7f1cdfe393a25649c7bff5a0785e48c6f5
